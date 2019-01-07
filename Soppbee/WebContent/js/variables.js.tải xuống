@@ -1,0 +1,216 @@
+﻿//service dserver
+var URLDSERVERSERVICE = '/gservices/rest/dserver';
+var DSERVERID = SERVICEID;
+var UrldServiceGeneral = URLDSERVERSERVICE + '/' + DSERVERID;
+var ITEMS_PER_PAGE = 5;
+var URL_DIRECT = '/dviewer.aspx?id='; // use: tabInfo
+var listMap = [];
+var MAX_EXTENT;
+var COLLECTIONS = new gServer.Collections(URLDSERVERSERVICE, DSERVERID);
+var ITEMS = new gServer.Items(URLDSERVERSERVICE, DSERVERID);
+var NODE_SELECT = null;
+var NODE_COLLECTION_SELECT = null;  //Đối tượng html select trên cây để
+//drs file manager
+var DSERVERID_MANAGER = "drs_mgr";
+var URLDRS_FILEMANAGER = "/gservices/rest/filemanagers/" + DSERVERID_MANAGER;
+var MAP_VIEW;
+var EPSG_4326 = new OpenLayers.Projection("EPSG:4326");
+var EPSG_900913 = new OpenLayers.Projection("EPSG:900913");
+var DATA_ITEM;
+var LIST_ITEMS = null;
+var CHECK_UPDATE = 0;
+var CHECK_EFFECT = 0;
+
+var LIMIT_COLLECT = 100;
+
+var khongcobanghi = 'Không có bản ghi nào được tìm thấy';
+
+
+//Danh sách các biến cấu hình
+var RUTGON = null;
+var CHITIET = null;
+var LINK = null;
+var NO_IMAGE = "/gCloudWeb/gExplorer4Cloud/Resources/img/tn-01.jpg";
+
+// Số item trên một row - hiện tại giao diện đang hỗ trợ 3
+var ITEM_IN_ROW = 3;
+
+var ROOT_COL_NAME = 'Tất cả';
+
+//************************ Template ****************************//
+
+// Template dạng lưới (grid)
+var template_item_grid = function (data) {
+    var strVar = '';
+    if (data != null) {
+        var listObj = fnGenatorDescription(data);
+        var anhdaidien = NO_IMAGE;
+        for (var i = 0; i < data.ListPathFile.length; i++) {
+            if (data.ListPathFile[i].Title.toLowerCase().indexOf("anhdaidien") == 0) {
+                anhdaidien = "/DRS/" + data.ListPathFile[i].PathFileView;
+            }
+        }
+        var mota = data.Description;
+        if (data.Description.length > 100) {
+            mota = data.Description.substring(0, 100) + '...';
+        }
+
+        strVar += '<div class="col-md-4"><article class="featured-course">';
+        strVar += '<figure class="image">';
+        strVar += '<div class="image-wrapper"><a onclick="fnXemUngDung(\'' + data.ItemID + '\')" href=""><img src="' + anhdaidien + '"></a></div>';
+        strVar += '<div class="stick-to-bottom">';
+        strVar += '<div class="feature-des">';
+        if (listObj.length > 0) {
+            if (listObj.length > 0) {
+                var desHTML = '';
+                var infoHTML = '';
+                for (var j = 0; j < listObj.length; j++) {
+
+                    for (var key in listObj[j]) {
+                        if (key == 'CreateDate' || key == 'ModifyDate' || key == 'ModifyFirstDate') {
+                            data[key] = fomatDateJson(data[key]);
+                        }
+                        if (data[key] != '') {
+                            if (key == 'Description') {
+                                if (mota != '')
+                                    desHTML += '<p>' + mota + '</p>';
+                            }
+                            else if (listObj[j][key] != '')
+                                infoHTML += '<li>' + listObj[j][key] + ' : ' + data[key] + '</li>';
+                            else
+                                infoHTML += '<li>' + data[key] + '</li>';
+                        }
+                    }
+                }
+                strVar += desHTML + '<ul>' + infoHTML + '</ul>';
+            }
+        }
+        strVar += '</div>';
+        strVar += '<a onclick="fnXemUngDung(\'' + data.ItemID + '\')" class="btn btn-framed btn-color-grey btn-small">Chi tiết</a>';
+        strVar += '</div>';
+        strVar += '<div class="background featuredBg"></div>';
+        strVar += '</figure>';
+        strVar += '<a href="#" onclick="fnXemUngDung(\'' + data.ItemID + '\')">';
+        var title = data.Title;
+        if (data.Title.length > 50) {
+            title = data.Title.substring(0, 47) + '...';
+        }
+
+
+        strVar += '<h3 class="title" title="' + data.Title + '">' + title + '</h3>';
+        strVar += '</a>';
+        strVar += '<div class="description"></div>';
+        strVar += '</article>';
+        strVar += '</div>';
+    }
+
+    return strVar;
+}
+
+// Template dạng danh sách (list)
+var template_item_list = function (data) {
+
+
+    var strVar = '';
+    if (data != null) {
+        var listObj = fnGenatorDescription(data);
+        var anhdaidien = NO_IMAGE;
+        for (var i = 0; i < data.ListPathFile.length; i++) {
+            if (data.ListPathFile[i].Title.toLowerCase().indexOf("anhdaidien") == 0) {
+                anhdaidien = "/DRS/" + data.ListPathFile[i].PathFileView;
+            }
+        }
+        strVar += "<div class=\"row\">";
+        strVar += "<div class=\"col-md-12\">";
+        strVar += "<article class=\"featured-course\">";
+        strVar += "<figure class=\"image\">";
+        strVar += "<div class=\"image-wrapper\"><a onclick=\"fnXemUngDung('" + data.ItemID + "')\"><img src=\"" + anhdaidien + "\"><\/a><\/div>";
+        strVar += "<\/figure>";
+        var title = data.Title;
+        if (data.Title.length > 50) {
+            title = data.Title.substring(0, 47) + '...';
+        }
+        if (data.Description.length > 200) {
+            data.Description = data.Description.substring(0, 200) + '...';
+        }
+
+
+        strVar += "<a onclick=\"fnXemUngDung('" + data.ItemID + "')\"  >";
+        strVar += "<h3 class=\"title\" title=\"" + data.Title + "\">" + title + "<\/h3>";
+        strVar += "<\/a>";
+        strVar += "<div class=\"description\">";
+        if (listObj.length > 0) {
+
+            var desHTML = '';
+            var infoHTML = '';
+
+            for (var j = 0; j < listObj.length; j++) {
+                for (var key in listObj[j]) {
+                    if (data[key] != '') {
+                        if (key == 'Description') {
+                            desHTML += '<p>' + data[key] + '</p>';
+                        }
+                        else if (listObj[j][key] != '')
+                            infoHTML += '<li>' + listObj[j][key] + ' : ' + data[key] + '</li>';
+                        else
+                            infoHTML += '<li>' + data[key] + '</li>';
+                    }
+                }
+            }
+            strVar += desHTML + '<ul>' + infoHTML + '</ul>';
+        }
+
+        strVar += "<\/div>";
+        strVar += "<div class=\"read-more stick-to-bottom\"><a onclick=\"fnXemUngDung('" + data.ItemID + "')\"  class=\" darkColor\">Chi tiết<\/a><\/div>";
+        strVar += "<\/article>";
+        strVar += "<\/div>";
+        strVar += "<\/div>";
+
+
+    }
+
+    return strVar;
+}
+
+
+var template_item_slide = function (data) {
+    var strVar = "";
+    if (data != null) {
+        var anhdaidien = NO_IMAGE;
+        for (var i = 0; i < data.ListPathFile.length; i++) {
+            if (data.ListPathFile[i].Title.toLowerCase().indexOf("anhdaidien") == 0) {
+                anhdaidien = "/DRS/" + data.ListPathFile[i].PathFileView;
+            }
+        }
+
+        var title = data.Title;
+        if (data.Title.length > 25) {
+            title = data.Title.substring(0, 25) + '...';
+        }
+        strVar += "<div class=\"image-carousel-slide\">";
+        strVar += "<div class=\"col-md-12 col-sm-12\">";
+        strVar += "                    <article class=\"featured-course\"> <a  onclick=\"fnXemUngDung('" + data.ItemID + "')\" href=\"#\">";
+        strVar += "                      <h3 class=\"title\" title=\"" + data.Title + "\">" + title + "<\/h3>";
+        strVar += "                      <\/a>";
+        strVar += "                      <figure class=\"image\">";
+        strVar += "                        <div class=\"image-wrapper\"><a onclick=\"fnXemUngDung('" + data.ItemID + "')\" href=\"\" ><img src=\"" + anhdaidien + "\"><\/a><\/div>";
+        strVar += "                        <div class=\"stick-to-bottom buttonSlide\"><a onclick=\"fnXemUngDung('" + data.ItemID + "')\" href=\"#\" class=\"btn btn-framed btn-color-grey btn-small\">Chi tiết<\/a><\/div>";
+        strVar += "                        <div class=\"background featuredBg\"><\/div>";
+        strVar += "                      <\/figure>";
+        strVar += "                      <div class=\"description\">";
+
+        if (data.Description.length > 80) {
+            data.Description = data.Description.substring(0, 80) + '...';
+        }
+
+        strVar += "                        <p style=\"text-align: justify;\">" + data.Description + "<\/p>";
+        strVar += "                      <\/div>";
+        strVar += "                    <\/article>";
+        strVar += "                    <!-- \/.featured-course --> ";
+        strVar += "                  <\/div>";
+        strVar += "                <\/div>";
+    }
+
+
+    return strVar;
+}

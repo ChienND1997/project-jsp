@@ -1,0 +1,464 @@
+﻿//******************* COLLECTION ************************//
+
+// Load danh sách thư mục cha
+function loadCollectionList() {
+
+    var lst_collect = localStorage.getItem('col_' + userName + '_' + MA_COLLECTION);
+    lst_collect = JSON.parse(lst_collect);
+    if (lst_collect == null) {
+        COLLECTIONS.getCollections(MA_COLLECTION, function (data) {
+            lst_collect = {};
+            lst_collect.time = new Date().getTime();
+            lst_collect.data = data;
+            lst_collect = JSON.stringify(lst_collect);
+            localStorage.setItem('col_' + userName + '_' + MA_COLLECTION, lst_collect);
+
+            if (DANG_HIEN_THI != 2)
+                showCollectionList(data);
+            else {
+                LIST_ITEMS = [];
+                showCollectionSlide(data);
+            }
+        },
+        {
+            columnsort: TRUONG_SAP_XEP,
+            typesort: KIEU_SAP_XEP_DM,
+            limit: LIMIT_COLLECT
+        });
+
+    }
+    else {
+
+        var timecheck = 0;
+        if (lst_collect.time != null && lst_collect.time != undefined)
+            timecheck = checkTimeX(CACHE_TIMER, lst_collect.time);
+
+        if (timecheck >= 0 || lst_collect.data == null) {
+            COLLECTIONS.getCollections(MA_COLLECTION, function (data) {
+                lst_collect = {};
+                lst_collect.time = new Date().getTime();
+                lst_collect.data = data;
+                lst_collect = JSON.stringify(lst_collect);
+                localStorage.setItem('col_' + userName + '_' + MA_COLLECTION, lst_collect);
+
+                if (DANG_HIEN_THI != 2)
+                    showCollectionList(data);
+                else {
+                    LIST_ITEMS = [];
+                    showCollectionSlide(data);
+                }
+            },
+            {
+                columnsort: TRUONG_SAP_XEP,
+                typesort: KIEU_SAP_XEP_DM,
+                limit: LIMIT_COLLECT
+            });
+        }
+        else {
+            var data = lst_collect.data;
+
+            if (DANG_HIEN_THI != 2)
+                showCollectionList(data);
+            else {
+                LIST_ITEMS = [];
+                showCollectionSlide(data);
+            }
+        }
+
+    }
+
+
+}
+
+//------------------------ Dạng list, grid --------------------//
+
+// Hàm trình bày danh mục tài nguyên
+function showCollectionList(data) {
+    var strVar = '<li class=" item blue active actived nt_open withsubsections lv1-Title dropDown" lvl="1"><a lvl="1" href="#" class=" selected" onclick="clickRootNode(' + "'" + MA_COLLECTION + "'" + ', this);"><b>Tất cả</b></a></li>';
+    if (data != null) {
+        if (data.resultCount > 0) {
+            var list_obj = data.data;
+            for (var i = 0; i < list_obj.length; i++) {
+                strVar += '<li class="item  blue lv1-Title dropDown" lvl="1"><a title="' + list_obj[i].Description + '" style="cursor: pointer;" lvl="1" class="" flagcheked="0" onclick="clickCollection(' + "'" + list_obj[i].ItemID + "'" + ',this)" >' + list_obj[i].Title + ' </a></li>';
+            }
+            
+        }
+    }
+    $("#verticalMenu").html(strVar);
+}
+
+// Hàm xử lý click node tất cả
+function clickRootNode(macolection, _obj) {
+
+    $('.subsections').css('display', 'none');
+    $('a').removeClass('selected');
+    $('li.clickNode').removeClass('clickNode');
+
+    $(_obj).addClass('selected');
+    NODE_COLLECTION_SELECT = _obj;
+    loadItemCollection(macolection, null, 1);
+
+    $("#lblCollectionName").html(ROOT_COL_NAME);
+    $('#lblSubCollection').html('');
+    $("#lblCollectionDescription").html('Tất cả tài nguyên');
+}
+
+// Hàm xử lý sự kiện click collection
+function clickCollection(parentId,_obj) {
+    var li = _obj.parentElement;
+    //console.log(li);
+    var level = $(li).attr('lvl');
+
+    NODE_COLLECTION_SELECT = _obj;
+    
+    
+    // Chọn node cha
+    if (level == 1) {
+
+        // Lấy thông tin info của Collection
+        loadCollectionInfo(parentId);
+
+        $('li[lvl=1]').removeClass('active withsubsections');
+        $(li).addClass('active actived withsubsections');
+
+        $('.subsections').css('display', 'none');
+
+        if ($(li).hasClass('actived') == true)
+            $($(li).children('ul')[0]).css('display', 'block');
+
+        $('a').removeClass('selected');
+        $(_obj).addClass('selected');
+
+
+        $('#lblSubCollection').html('');
+
+        if ($(li).hasClass('clickNode') == true) {
+            $($(li).children('ul')[0]).css('display', 'none');
+            $('li.clickNode').removeClass('clickNode');
+            loadItemCollection(parentId, null, 0);
+            return;
+        }
+        else {
+            $('li.clickNode').removeClass('clickNode');
+            $(li).addClass('clickNode');
+        }
+
+        // Kiểm tra đã tải collection con về chưa -> tải hoặc show
+        if ($(_obj).attr('flagcheked') == 0) {
+
+            // Xử lý cache
+            loadSubData(parentId, level,'');
+            // End cache
+            $(_obj).attr("flagcheked", 1);
+
+        }
+        else {
+            $($(li).find('ul')[0]).css('display', 'block');
+        }
+        
+        loadItemCollection(parentId, null, 0);
+    }
+    // Chọn node con
+    else {
+        var subtext = '';
+        if ($(_obj).attr('subText') != undefined)
+            subtext = $(_obj).attr('subText');
+        $('#lblSubCollection').html(subtext);
+        $($('ul[lvl=1]').find('a')).removeClass('selected');
+        $(_obj).addClass('selected');
+
+        if ($(li).hasClass('clickNode') == true) {
+            $($(li).children('ul')[0]).css('display', 'none');
+            $('li.clickNode').removeClass('clickNode');
+            addClassLiParent(li);
+            loadItemCollection(parentId, null, 0);
+            return;
+        }
+        else {
+            $('li.clickNode').removeClass('clickNode');
+            $(li).addClass('clickNode');
+            addClassLiParent(li);
+        }
+
+        // Ẩn tất cả submenu và hiện treemenu đang chọn
+        $('ul li ul.subsections').css('display', 'none');
+        showSubMenu(li);
+        
+        // Gán class cho thẻ a -> hiện màu cam
+        
+        
+
+        // Kiểm tra đã tải collection con về chưa -> tải hoặc show
+        if ($(_obj).attr('flagcheked') == 0) {
+
+            // Xử lý cache
+            loadSubData(parentId, level, subtext);
+            // End cache
+            $(_obj).attr("flagcheked", 1);
+
+        }
+        else {
+            $($(li).find('ul')[0]).css('display', 'block');
+        }
+        loadItemCollection(parentId, null, 0);
+             
+    }
+
+}
+
+// Hàm xử lý add class clickNode cho li ( class clickNode đánh dấu các li đang được expand)
+function addClassLiParent(li) {
+//    console.log(li);
+//    console.log($(li).attr('lvl'));
+    if (li != null || li != undefined) {
+        if ($(li).attr('lvl') != 1) {
+            li = $(li).parent().parent('li');
+            $(li).addClass('clickNode');
+            addClassLiParent(li);
+        }
+        else
+            return;
+    }
+}
+
+// Hàm xử lý show menu con
+function showSubMenu(node) {
+    //console.log(node);
+
+    var ulParent = $(node).parent('.subsections')[0];
+    if (ulParent != null || ulParent != undefined) {
+        
+        $(ulParent).css('display', 'block');
+        if ($(ulParent).attr('lvl') != 1) {
+            var li = $(ulParent).parent('li')[0];
+            showSubMenu(li);
+        }
+        else
+            return;
+    }
+}
+
+// Hàm lấy dữ liệu collection con
+function loadSubData(parentId, level, subtext) {
+    var lst_collect = localStorage.getItem('col_' + userName + '_' + parentId);
+    lst_collect = JSON.parse(lst_collect);
+    if (lst_collect == null) {
+        COLLECTIONS.getCollections(parentId, function (data) {
+            lst_collect = {};
+            lst_collect.time = new Date().getTime();
+            lst_collect.data = data;
+            lst_collect = JSON.stringify(lst_collect);
+            localStorage.setItem('col_' + userName + '_' + parentId, lst_collect);
+            showSubCollection(data, level, subtext);
+        }, {
+            columnsort: TRUONG_SAP_XEP,
+            typesort: KIEU_SAP_XEP_DM,
+            limit: LIMIT_COLLECT
+        });
+    }
+    else {
+        var timecheck = 0;
+        if (lst_collect.time != null && lst_collect.time != undefined)
+            timecheck = checkTimeX(CACHE_TIMER, lst_collect.time);
+        if (timecheck >= 0 || lst_collect.data == null) {
+            COLLECTIONS.getCollections(parentId, function (data) {
+                lst_collect = {};
+                lst_collect.time = new Date().getTime();
+                lst_collect.data = data;
+                lst_collect = JSON.stringify(lst_collect);
+                localStorage.setItem('col_' + userName + '_' + parentId, lst_collect);
+                showSubCollection(data, level, subtext);
+            },
+            {
+                columnsort: TRUONG_SAP_XEP,
+                typesort: KIEU_SAP_XEP_DM,
+                limit: LIMIT_COLLECT
+            });
+        }
+        else {
+            var data = lst_collect.data;
+            showSubCollection(data, level, subtext);
+        }
+    }
+}
+
+
+// Hàm lấy thông tin của collection theo id
+function loadCollectionInfo(macollection) {
+    // Sử lý cache
+    var lst_collect = localStorage.getItem('col_' + userName + '_' + macollection + '_info');
+    lst_collect = JSON.parse(lst_collect);
+    if (lst_collect == null) {
+
+        COLLECTIONS.getCollection(macollection, function (data) {
+            lst_collect = {};
+            lst_collect.time = new Date().getTime();
+            lst_collect.data = data;
+            lst_collect = JSON.stringify(lst_collect);
+            localStorage.setItem('col_' + userName + '_' + macollection + '_info', lst_collect);
+
+            $("#lblCollectionName").html(data.Title);
+            $("#lblCollectionDescription").html(data.Description);
+
+
+        }, {
+            columnsort: TRUONG_SAP_XEP,
+            typesort: KIEU_SAP_XEP_DM,
+            limit: LIMIT_COLLECT
+        });
+    }
+    else {
+        var timecheck = 0;
+        if (lst_collect.time != null && lst_collect.time != undefined)
+            timecheck = checkTimeX(CACHE_TIMER, lst_collect.time);
+        if (timecheck >= 0 || lst_collect.data == null) {
+            COLLECTIONS.getCollection(macollection, function (data) {
+                lst_collect = {};
+                lst_collect.time = new Date().getTime();
+                lst_collect.data = data;
+                lst_collect = JSON.stringify(lst_collect);
+                localStorage.setItem('col_' + userName + '_' + macollection + '_info', lst_collect);
+
+                $("#lblCollectionName").html(data.Title);
+                $("#lblCollectionDescription").html(data.Description);
+
+
+            }, {
+                columnsort: TRUONG_SAP_XEP,
+                typesort: KIEU_SAP_XEP_DM,
+                limit: LIMIT_COLLECT
+            });
+        }
+        else {
+            var data = lst_collect.data;
+            $("#lblCollectionName").html(data.Title);
+            $("#lblCollectionDescription").html(data.Description);
+        }
+    }
+}
+
+// Hàm xử lý thêm collection con
+function showSubCollection(data, level, subtext) {
+
+    if (data != null) {
+        //console.log(subtext);
+        var strVar = ''; 
+        if (data.resultCount > 0) {
+            strVar += '<ul lvl=' + level + ' class="subsections" style="display: block;">';
+            var list_obj = data.data;
+            level = parseInt(level) + 1;
+            for (var i = 0; i < list_obj.length; i++) {
+                var st = '';
+                if(subtext != '')
+                    st = subtext + '&nbsp;&nbsp;&nbsp; / &nbsp;&nbsp;&nbsp;' + list_obj[i].Title;
+                else
+                    st = list_obj[i].Title;
+                strVar += '<li lvl=' + level + '><a style="cursor: pointer;" lvl=' + level + ' subText="' + st + '" flagcheked="0"  onclick="clickCollection(' + "'" + list_obj[i].ItemID + "'" + ',this)">' + list_obj[i].Title + '</a></li>';
+            }
+            strVar += '</ul>';
+        }
+        
+        $(NODE_COLLECTION_SELECT).parent().append(strVar);
+    }
+}
+
+//------------------------ Dạng slide --------------------//
+
+// Hàm xử lý trình bày thư mục
+function showCollectionSlide(data) {
+
+    var htmlContent = '';
+    if (data != null) {
+        var list_obj = data.data;
+        for (var i = 0; i < list_obj.length; i++) {
+            htmlContent += "<div class=\"block\">";
+            htmlContent += "        <div class=\"container\">";
+            htmlContent += "            <header>";
+            htmlContent += "                <h2>" + list_obj[i].Title + "<\/h2><h2 class=\"noInline\">&nbsp;&nbsp;\/&nbsp;&nbsp;<\/h2><h4 class=\"noInline child\"><\/h4>";
+            htmlContent += "            <\/header>";
+            htmlContent += "              <p>" + list_obj[i].Description + "<\/p>";
+
+            htmlContent += "<div class=\"homepage-carousel-wrapper\">";
+            htmlContent += "<div class=\"row\">";
+            htmlContent += "<div class=\"feature-carousel 300h\">";
+
+            htmlContent += getItemsSlide(list_obj[i].ItemID);
+
+            htmlContent += "</div>";
+            htmlContent += "</div>";
+            htmlContent += "</div>";
+
+            htmlContent += "</div>";
+            htmlContent += "</div>";
+        }
+    }
+
+    $('#featured-courses').html(htmlContent);
+    loadEffect();
+}
+
+// Hàm xử lấy danh sách item của một
+function getItemsSlide(macollection) {
+    var html = '';
+    var lst_items = localStorage.getItem('item_' + userName + '_' + macollection + '_all');
+    lst_items = JSON.parse(lst_items);
+    if (lst_items == null) {
+        COLLECTIONS.getItems(macollection, function (data) {
+            lst_items = {};
+            lst_items.time = new Date().getTime();
+            lst_items.data = data;
+            lst_items = JSON.stringify(lst_items);
+            localStorage.setItem('item_' + userName + '_' + macollection + '_all', lst_items);
+            html = showItemsSlide(data);
+        }, {
+            start: 0,
+            limit: 200,
+            page: 1,
+            columnsort: TRUONG_SAP_XEP,
+            typesort: KIEU_SAP_XEP_DM
+        }, 1);
+    }
+    else {
+        var timecheck = 0;
+        if (lst_items.time != null && lst_items.time != undefined)
+            timecheck = checkTimeX(CACHE_TIMER, lst_items.time);
+
+
+        if (timecheck >= 0 || lst_items.data == null) {
+            COLLECTIONS.getItems(macollection, function (data) {
+                lst_items = {};
+                lst_items.time = new Date().getTime();
+                lst_items.data = data;
+                lst_items = JSON.stringify(lst_items);
+                localStorage.setItem('item_' + userName + '_' + macollection + '_all', lst_items);
+                html = showItemsSlide(data);
+            }, {
+                start: 0,
+                limit: 200,
+                page: 1,
+                columnsort: TRUONG_SAP_XEP,
+                typesort: KIEU_SAP_XEP_DM
+            }, 1);
+        }
+        else {
+            var data = lst_items.data;
+            html = showItemsSlide(data);
+        }
+    }
+
+    return html;
+}
+
+// Hàm trình bày slide items
+function showItemsSlide(data) {
+    var html = '';
+    if (data != null) {
+        
+        var list_obj = data.data;
+        for (var i = 0; i < list_obj.length; i++) {
+            html += template_item_slide(list_obj[i]);
+            LIST_ITEMS.push(list_obj[i]);
+        }
+    }
+    return html;
+}

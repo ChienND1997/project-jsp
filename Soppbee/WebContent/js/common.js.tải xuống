@@ -1,0 +1,641 @@
+﻿function getQuerystring(key, default_) {
+    if (default_ == null) default_ = "";
+    key = key.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regex = new RegExp("[\\?&]" + key + "=([^&#]*)");
+    var qs = regex.exec(window.location.href);
+    if (qs == null)
+        return default_;
+    else
+        return qs[1];
+}
+
+function fomatDateJson(date) {
+    date = date.replace('/Date(', '');
+    date = date.replace(')/', '');
+    var expDate = new Date(parseInt(date));
+    var day = expDate.getDate();
+    var month = expDate.getMonth() + 1;
+    var year = expDate.getFullYear();
+
+    return day + '/' + month + '/' + year;
+}
+
+Object.keys = Object.keys || (function () {
+    var hasOwnProperty = Object.prototype.hasOwnProperty,
+        hasDontEnumBug = !{ toString: null}.propertyIsEnumerable("toString"),
+        DontEnums = [
+            'toString',
+            'toLocaleString',
+            'valueOf',
+            'hasOwnProperty',
+            'isPrototypeOf',
+            'propertyIsEnumerable',
+            'constructor'
+        ],
+        DontEnumsLength = DontEnums.length;
+
+    return function (o) {
+        if (typeof o != "object" && typeof o != "function" || o === null)
+            throw new TypeError("Object.keys called on a non-object");
+
+        var result = [];
+        for (var name in o) {
+            if (hasOwnProperty.call(o, name))
+                result.push(name);
+        }
+
+        if (hasDontEnumBug) {
+            for (var i = 0; i < DontEnumsLength; i++) {
+                if (hasOwnProperty.call(o, DontEnums[i]))
+                    result.push(DontEnums[i]);
+            }
+        }
+
+        return result;
+    };
+})();
+
+
+
+
+
+view = $.cookie('display');
+
+if (view) {
+    display(view);
+}
+
+
+function fnXemUngDung(itemID) {
+    //Lẩy item
+    var item = null;
+    for (var i = 0; i < LIST_ITEMS.length; i++) {
+        if (LIST_ITEMS[i].ItemID == itemID) {
+            item = LIST_ITEMS[i];
+            break;
+        }
+    }
+
+    var _cau_hinh_item = null;
+    for (var i = 0; i < CAU_HINH_NANGCAO.length; i++) {
+        if (Object.keys(CAU_HINH_NANGCAO[i])[0].toLowerCase() == item.Type.toLowerCase()) {
+            _cau_hinh_item = CAU_HINH_NANGCAO[i];
+            break;
+        }
+    }
+
+    //Nếu có cấu hình 
+    if (_cau_hinh_item != null)
+        _cau_hinh_item = _cau_hinh_item[Object.keys(_cau_hinh_item)[0]];
+
+    var _link = _cau_hinh_item.link;
+    var _method = _cau_hinh_item.method;
+    //Lấy method
+    if (_method.toLowerCase() == "post") {
+        var form = $('<form id="testform" action="' + _link + '" method="post">' +
+                        '<input type="hidden" name="itemid" value="' + item.ItemID + '" />' +
+                        '</form>');
+        $('body').append(form);
+        $(form).submit();
+    } else if (_method.toLowerCase() == "get") {
+        //Không blank
+        //window.location = link;
+        var objectLink = $.url(_link).param();
+        //console.log(objectLink);
+        var keys = Object.keys(objectLink);
+        var _linkGET = "";
+        _linkGET += _link.split('?')[0] + "?";
+        for (var i = 0; i < keys.length; i++) {
+            var _fied = "";
+            _fied = objectLink[keys[i]];
+            if (_fied.indexOf("'") != -1) {
+                _fied = _fied.replace(/'{/, "");
+                _fied = _fied.replace(/}'/, "");
+                _linkGET += keys[i] + "=" + "'" + item[_fied] + "'" + "&";
+            } else {
+                _fied = _fied.replace(/{/, "");
+                _fied = _fied.replace(/}/, "");
+                _linkGET += keys[i] + "=" + item[_fied] + "&";
+            }
+
+        }
+        _linkGET = _linkGET.substr(0, _linkGET.length - 1);
+		
+		//Code mới
+		_linkGET = _link.replace(/{[^{}]+}/g, function(key){
+			return item[key.replace(/[{}]+/g, "")] || "";
+		});
+		
+        window.open(_linkGET, '_blank');
+        //console.log(_linkGET);
+    }
+}
+
+
+function fnGenatorDescription(data) {
+    try {
+        var listObj = [];
+        if (data != null) {
+            var type = data.Type;
+            for (var i = 0; i < CAU_HINH_NANGCAO.length; i++) {
+                if (CAU_HINH_NANGCAO[i][type] != undefined) {
+                    listObj = CAU_HINH_NANGCAO[i][type].rutgon;
+                    return listObj;
+                }
+            }
+        }
+        return listObj;
+    }
+    catch (e) {
+        console.log(e);
+    }  
+}
+
+function form_send_resource(link, url, name) {
+    var url_post = link;
+    var res_url = url;
+    var res_name = name;
+
+    var form = $('<form action="' + url_post + '" method="post">' +
+'<input type="hidden" name="res_url" value="' + res_url + '" />' +
+'<input type="hidden" name="res_name" value="' + res_name + '" />' +
+'</form>');
+    $('body').append(form);
+    $(form).submit(function (event, data) { });
+}
+
+// Kiểm tra thời gian sau X phút
+function checkTimeX(x, date) {
+    if (x == '0')
+        return 0;
+    var regex_check = x * 60 * 1000;
+    var new_date = new Date().getTime();
+    var resul = new_date - date;
+    //console.log(resul + ' - ' + regex_check);
+    if (resul < regex_check)
+        return -1;
+    else if (resul == regex_check)
+        return 0;
+    else
+        return 1;
+}
+
+// Xóa localStorage
+function clearLocalStorage() {
+    var count = localStorage.length;
+    if (count > 0) {
+        for (var i = count; i >= 0; i--) {
+            if (localStorage.key(i) != undefined || localStorage.key(i) != null) {
+                var check = 0;
+                var key = localStorage.key(i);
+                var j = key.indexOf('col_' + userName);
+                var z = key.indexOf('item_' + userName);
+                var w = key.indexOf('items_' + userName);
+                var y = key.indexOf('new_' + userName);
+                if (j >= 0) {
+                    localStorage.removeItem(localStorage.key(i));
+                    count = count - 1;
+                }
+                else if (z >= 0) {
+                    localStorage.removeItem(localStorage.key(i));
+                    count = count - 1;
+                }
+                else if (w >= 0) {
+                    localStorage.removeItem(localStorage.key(i));
+                    count = count - 1;
+                }
+                else if (y > 0) {
+                    localStorage.removeItem(localStorage.key(i));
+                    count = count - 1;
+                }
+            }
+        }
+        fnLoadGiaoDien();
+    }
+}
+
+//Grid List View Document
+function display(view) {
+
+    if (view == 'list') {
+        $('.gridMaps').css("display", "none");
+        $('.listMaps').css("display", "block");
+        $('.buttonRefresh').css("display", "block");
+
+        $('.display').html('<div title="Xóa bộ nhớ đệm" onclick="clearLocalStorage();" class="buttonRefresh buttonDrop featured-bg radius3px white-color myriad"><span></span></div><div class="active-display-list">List</div><div class="display-grid" onclick="display(\'grid\');">Grid</div>');
+    } else {
+
+        $('.gridMaps').css("display", "block");
+        $('.listMaps').css("display", "none");
+        $('.buttonRefresh').css("display", "block");
+
+        $('.display').html('<div title="Xóa bộ nhớ đệm" onclick="clearLocalStorage();" class="buttonRefresh buttonDrop featured-bg radius3px white-color myriad"><span></span></div><div class="display-list" onclick="display(\'list\');">List</div><div class="active-display-grid">Grid</div>');
+    }
+}
+
+function activedDropDownArrow() {
+    $('.nicetree_collapse').click(function () {
+        $('.dropDown').removeClass('actived');
+    });
+    $('.nicetree_expand').click(function () {
+        $('.dropDown').addClass('actived');
+    });
+    $('.nicetree a').click(function () {
+        if ($(this).hasClass('select') == false) {
+            $('.nicetree a').removeClass('select');
+            $(this).addClass('select');
+        };
+        if ($(this).parent().hasClass('dropDown actived') == false) {
+            $(this).parent().addClass('actived');
+        }
+        else {
+            $(this).parent().removeClass('actived');
+            $(this).removeClass('select');
+        }
+    });
+}
+
+
+
+function fnPhanTrang(page, total, namefn) {
+    NUMBER_ENTRY = PAGE_SIZE;
+    var contentHTML = "";
+    var contentHTML1 = "";
+    var contentHTML2 = "";
+    var contentHTML3 = "";
+    var contentHTML4 = "";
+    var contentHTML5 = "";
+
+    $("#paging").html(contentHTML);
+    var kq = parseInt(parseInt(total) / NUMBER_ENTRY);
+    if (kq * NUMBER_ENTRY < parseInt(total)) {
+        kq = kq + 1;
+    }
+    if (parseInt(kq) == parseInt(2)) {
+        contentHTML1 = '<a href="#" onclick="' + namefn + '(1)" class="first">Đầu</a><span></span>';
+        if (parseInt(page) == 1) {
+            contentHTML2 = '<a href="#" class="num itemEffect radius3px actived " onclick="' + namefn + '(' + 1 + ')">1</a><span></span>';
+            contentHTML3 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + 2 + ')">2</a><span></span>';
+        }
+        else {
+            contentHTML2 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + 1 + ')">1</a><span></span>';
+            contentHTML3 = '<a href="#" class="num itemEffect radius3px actived " onclick="' + namefn + '(' + 2 + ')">2</a><span></span>';
+        }
+        contentHTML4 = '<a href="#" class="num itemEffect radius3px"  onclick="' + namefn + '(' + 2 + ')" class="last">Cuối</a><span></span>';
+        contentHTML = contentHTML1 + contentHTML2 + contentHTML3 + contentHTML4;
+    }
+
+    if (parseInt(kq) > parseInt(2)) {
+        contentHTML1 = '<a href="#" class="first"  onclick="' + namefn + '(' + 1 + ')" class="first">Đầu</a><span></span>';
+
+        if (0 < parseInt(page - 1) || parseInt(page - 1) < kq) {
+            contentHTML2 = '<a href="#" class="prev" onclick="' + namefn + '(' + parseInt(page - 1) + ')"></a>';
+            contentHTML2 += '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page - 1) + ')">' + parseInt(page - 1) + '</a>';
+        }
+        contentHTML3 = '<a href="#" class="num itemEffect radius3px actived " onclick="">' + parseInt(page) + '</a><span></span>';
+
+        if (0 < parseInt(page + 1) || parseInt(page + 1) < kq) {
+            contentHTML4 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page + 1) + ')">' + parseInt(page + 1) + '</a>';
+            contentHTML4 += '<a href="#" class="next" onclick="' + namefn + '(' + parseInt(page + 1) + ')"></a>';
+        }
+
+        contentHTML5 = '<a href="#" onclick="' + namefn + '(' + parseInt(kq) + ')"  class="last">Cuối</a><span></span>';
+
+        if (parseInt(page) < 2) {
+            contentHTML1 = '<a href="#" onclick="" class="first">Đầu</a><span></span>';
+            contentHTML2 = '<a href="#"  class="num itemEffect radius3px actived " onclick=""><b>' + parseInt(page) + '</b></a><span></span>';
+            if (0 < parseInt(page + 1) || parseInt(page + 1) <= kq) {
+                contentHTML3 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page + 1) + ')">' + parseInt(page + 1) + '</a><span></span>';
+            }
+            if (0 < parseInt(page + 2) || parseInt(page + 1) <= kq) {
+                contentHTML4 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page + 2) + ')">' + parseInt(page + 2) + '</a><span></span>';
+            }
+        }
+
+        if (parseInt(page) == kq) {
+            if (0 < parseInt(page - 2) || parseInt(page + 1) <= kq) {
+                contentHTML2 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page - 2) + ')">' + parseInt(page - 2) + '</a><span></span>';
+            }
+            if (0 < parseInt(page - 1) || parseInt(page + 1) <= kq) {
+                contentHTML3 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + parseInt(page - 1) + ')">' + parseInt(page - 1) + '</a><span></span>';
+            }
+
+            contentHTML4 = '<a href="#" class="num itemEffect radius3px actived " onclick="">' + parseInt(page) + '</a><span></span>';
+            contentHTML5 = '<a href="#" onclick=""  class="last">Cuối</a><span></span>';
+        }
+        contentHTML = contentHTML1 + contentHTML2 + contentHTML3 + contentHTML4 + contentHTML5;
+    }
+    $("#idPhanTrang").html(contentHTML);
+    $("#idPhanTrang2").html(contentHTML);
+    $("#idPhanTrang3").html(contentHTML);
+    $("#idPhanTrang4").html(contentHTML);
+
+    $("#divTotalCountCopyGrid1").html($("#divTotalCountGrid1").html());
+    $("#divTotalCountCopyGrid2").html($("#divTotalCountGrid2").html());
+
+    $("#divToTalCountListCopy1").html($("#divToTalCountList1").html());
+    $("#divToTalCountListCopy2").html($("#divToTalCountList2").html());
+}
+
+
+function fnPhanTrang2(page, total, namefn, ID) {
+    NUMBER_ENTRY = PAGE_SIZE;
+    var contentHTML = "";
+    var contentHTML1 = "";
+    var contentHTML2 = "";
+    var contentHTML3 = "";
+    var contentHTML4 = "";
+    var contentHTML5 = "";
+
+    $("#paging").html(contentHTML);
+    var kq = parseInt(parseInt(total) / NUMBER_ENTRY);
+    if (kq * NUMBER_ENTRY < parseInt(total)) {
+        kq = kq + 1;
+    }
+    if (parseInt(kq) == parseInt(2)) {
+        contentHTML1 = '<a href="#" onclick="' + namefn + '(' + "'" + ID + "'" + ',1)" class="first">Đầu</a><span></span>';
+        if (parseInt(page) == 1) {
+            contentHTML2 = '<a href="#" class="num itemEffect radius3px actived " onclick="' + namefn + '(' + "'" + ID + "'" + ',1)" >1</a><span></span>';
+            contentHTML3 = '<a href="#" class="num itemEffect radius3px"onclick="' + namefn + '(' + "'" + ID + "'" + ',2)">2</a><span></span>';
+        }
+        else {
+            contentHTML2 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'" + ',1)">1</a><span></span>';
+            contentHTML3 = '<a href="#" class="num itemEffect radius3px actived " onclick="' + namefn + '(' + "'" + ID + "'" + ',2)" >2</a><span></span>';
+        }
+        contentHTML4 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'" + ',2)"  class="last">Cuối</a><span></span>';
+        contentHTML = contentHTML1 + contentHTML2 + contentHTML3 + contentHTML4;
+    }
+
+    if (parseInt(kq) > parseInt(2)) {
+        contentHTML1 = '<a href="#" class="first"  onclick="' + namefn + '(' + "'" + ID + "'" + ',1)" class="first">Đầu</a><span></span>';
+
+        if (0 < parseInt(page - 1) || parseInt(page - 1) < kq) {
+            contentHTML2 = '<a href="#" class="prev" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page - 1) + ')"></a>';
+            contentHTML2 += '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page - 1) + ')">' + parseInt(page - 1) + '</a>';
+        }
+        contentHTML3 = '<a href="#" class="num itemEffect radius3px actived " onclick="">' + parseInt(page) + '</a><span></span>';
+
+        if (0 < parseInt(page + 1) || parseInt(page + 1) < kq) {
+            contentHTML4 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page + 1) + ')">' + parseInt(page + 1) + '</a>';
+            contentHTML4 += '<a href="#" class="next" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page + 1) + ')"></a>';
+        }
+
+        contentHTML5 = '<a href="#" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(kq) + ')"  class="last">Cuối</a><span></span>';
+
+        if (parseInt(page) < 2) {
+            contentHTML1 = '<a href="#" onclick="" class="first">Đầu</a><span></span>';
+            contentHTML2 = '<a href="#"  class="num itemEffect radius3px actived " onclick=""><b>' + parseInt(page) + '</b></a><span></span>';
+            if (0 < parseInt(page + 1) || parseInt(page + 1) <= kq) {
+                contentHTML3 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page + 1) + ')">' + parseInt(page + 1) + '</a><span></span>';
+            }
+            if (0 < parseInt(page + 2) || parseInt(page + 1) <= kq) {
+                contentHTML4 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page + 2) + ')">' + parseInt(page + 2) + '</a><span></span>';
+            }
+        }
+
+        if (parseInt(page) == kq) {
+            if (0 < parseInt(page - 2) || parseInt(page + 1) <= kq) {
+                contentHTML2 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page - 2) + ')">' + parseInt(page - 2) + '</a><span></span>';
+            }
+            if (0 < parseInt(page - 1) || parseInt(page + 1) <= kq) {
+                contentHTML3 = '<a href="#" class="num itemEffect radius3px" onclick="' + namefn + '(' + "'" + ID + "'," + parseInt(page - 1) + ')">' + parseInt(page - 1) + '</a><span></span>';
+            }
+
+            contentHTML4 = '<a href="#" class="num itemEffect radius3px actived " onclick="">' + parseInt(page) + '</a><span></span>';
+            contentHTML5 = '<a href="#" onclick=""  class="last">Cuối</a><span></span>';
+        }
+        contentHTML = contentHTML1 + contentHTML2 + contentHTML3 + contentHTML4 + contentHTML5;
+    }
+    $("#idPhanTrang").html(contentHTML);
+    $("#idPhanTrang2").html(contentHTML);
+    $("#idPhanTrang3").html(contentHTML);
+    $("#idPhanTrang4").html(contentHTML);
+
+    $("#divTotalCountCopyGrid1").html($("#divTotalCountGrid1").html());
+    $("#divTotalCountCopyGrid2").html($("#divTotalCountGrid2").html());
+
+    $("#divToTalCountListCopy1").html($("#divToTalCountList1").html());
+    $("#divToTalCountListCopy2").html($("#divToTalCountList2").html());
+
+}
+
+
+function loadEffect() { 
+
+    //var $ = jQuery.noConflict();
+
+    $("#treeNote").niceTree({
+	    animSpeed: 500
+    });
+
+    $("#verticalMenu").niceTree({
+	    animSpeed: 400
+    });
+// treeMenu
+    function verticalMenuCss(){
+	    var i=0;
+	    var strUL = "ul"
+	    var paddingAUL = 0;
+	    for(i=0;i<=9;i++){
+			    strUL = strUL + " ul";
+			    paddingAUL = paddingAUL +0;
+			    $('#verticalMenuCss').append(".treeMenu " +  strUL + " li a {padding-left:" + paddingAUL +"px;}");
+		    };
+	
+	};
+    verticalMenuCss();
+	var nicetreeClick = true;
+	
+    $('.nicetree_collapse').click(function(){
+		$('.dropDown').removeClass('actived');
+	});
+
+    $('.nicetree_expand').click(function(){
+		$('.dropDown').addClass('actived');
+	});	
+    		
+    $('.nicetree a').click (function(){
+		if($(this).hasClass('select')==false){
+			    $('.nicetree a').removeClass('select');
+				$(this).addClass('select');
+			};
+		if($(this).parent().hasClass('dropDown actived')==false){	
+			$(this).parent().addClass('actived');
+			
+		}
+		else{
+			$(this).parent().removeClass('actived');
+			$(this).removeClass('select');
+			}
+		
+	});	
+    // listContent DropDown
+	
+	/////
+	
+    if (location.hash) {
+        window.scrollTo(0, 0);
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 1);
+    }
+
+//  Homepage Slider (Flex Slider)
+
+    if ($('.flexslider').length > 0) {
+        $('.flexslider').flexslider({
+            controlNav: false,
+            prevText: "",
+            nextText: ""
+        });
+    }
+
+//  Open tab from another page
+
+    $('a[data-toggle="tab"]').on('show.bs.tab', function(e) {});
+
+    $('#tabs a[href=' + location.hash +']').tab('show');
+
+    $('.secondary-navigation li a').on('click',function (e) {
+        $('#tabs a[href=' + this.hash +']').tab('show');
+    });
+
+
+//  Table Sorter
+    if ($('.tablesorter').length > 0) {
+        $(".course-list-table").tablesorter();
+    }
+
+//  Checkbox styling
+
+    if ($('.checkbox').length > 0) {
+        $('input').iCheck();
+    }
+
+// Disable input on count down
+
+    $('.knob').prop("disabled", true);
+
+
+//  Count Down - Landing Page
+
+    if ($('.count-down').length > 0) {
+        $(".count-down").ccountdown(2014,12,24,'18:00');
+    }
+
+//  Selectize
+
+    $('select').selectize();
+
+//  Center Slide Vertically
+
+    $('.flexslider').each(function () {
+        var slideHeight = $(this).height();
+        var contentHeight = $('.flexslider .slides li .slide-wrapper').height();
+        var padTop = (slideHeight / 2) - (contentHeight / 2);
+        $('.flexslider .slides li .slide-wrapper').css('padding-top', padTop);
+    });
+
+//  Slider height on small screens
+
+    if (document.documentElement.clientWidth < 991) {
+        $('#landing-page-head-image').css('height', $(window).height());
+        $('.flexslider').css('height', $(window).height());
+    }
+
+//  Homepage Carousel
+
+    $(".image-carousel").owlCarousel({
+        items: 1,
+        autoPlay: true,
+        stopOnHover: true,
+        navigation: true,
+        navigationText : false,
+        responsiveBaseWidth: ".image-carousel-slide",
+        //responsiveBaseWidth: ".author"
+		// Responsive 
+    	responsive: true,
+    	responsiveRefreshRate : 200,
+		singleItem:true,
+		slideSpeed : 1000
+    });
+//  Feature Carousel
+
+    $(".feature-carousel").owlCarousel({
+         items : 100, //10 items above 1000px browser width
+         itemsDesktop : [1200,4], //5 items between 1000px and 901px
+         itemsDesktopSmall : [900,4], // betweem 900px and 601px
+         itemsTablet: [600,3], //2 items between 600 and 0
+         itemsMobile : [450,1], // itemsMobile disabled - inherit from itemsTablet option
+        autoPlay: false,
+        stopOnHover: true,
+        navigation: true,
+        navigationText : true,
+        responsiveBaseWidth: ".homepage-carousel-wrapper",
+    	responsive: true,
+    	responsiveRefreshRate : 200,
+		slideSpeed : 1000
+    });
+//  Smooth Scroll
+
+    $('.navigation-wrapper .nav a[href^="#"], a[href^="#"].roll').on('click',function (e) {
+        e.preventDefault();
+        var target = this.hash,
+            $target = $(target);
+        $('html, body').stop().animate({
+            'scrollTop': $target.offset().top
+        }, 2000, 'swing', function () {
+            window.location.hash = target;
+        });
+    });
+
+
+//  author Carousel (Owl Carousel)
+
+    $(".author-carousel").owlCarousel({
+        items: 1,
+        autoPlay: false,
+        stopOnHover: true,
+        responsiveBaseWidth: ".author"
+    });
+
+//  Equal Rows
+
+    if(document.documentElement.clientWidth > 991) {
+        $('.row').equalHeights();
+    }
+
+    $( document.body ).on( 'click', '.dropdown-menu li', function( event ) {
+        var $target = $( event.currentTarget );
+        $target.closest( '.btn-group' )
+            .find( '[data-bind="label"]' ).text( $target.text() )
+            .end()
+            .children( '.dropdown-toggle' ).dropdown( 'toggle' );
+        return false;
+    });
+
+//  Contact Form with validation
+
+    $("#submit").bind("click", function(event){
+        $("#contactform").validate({
+            submitHandler: function() {
+                $.post("contact.php", $("#contactform").serialize(),  function(response) {
+                    $('#form-status').html(response);
+                    $('#submit').attr('disabled','true');
+                });
+                return false;
+            }
+        });
+    });
+
+//  Vanilla Box
+
+    if ($('.image-popup').length > 0) {
+        $('a.image-popup').vanillabox({
+            animation: 'default',
+            type: 'image',
+            closeButton: true,
+            repositionOnScroll: true
+        });
+    }
+}

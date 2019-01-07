@@ -1,0 +1,108 @@
+﻿//******************* ITEM ************************//
+
+// Hàm xử lý load danh sách item của một collection
+function loadItemCollection(macollection,page,all) {
+    if (page == undefined || page == null)
+        page = 1;
+    var start = (page - 1) * parseInt(PAGE_SIZE);
+
+    if (all == undefined) {
+        all = 1;
+    }
+
+    var lst_items = localStorage.getItem('item_' + userName + '_' + macollection + '_' + page);
+    lst_items = JSON.parse(lst_items);
+    if (lst_items == null) {
+        COLLECTIONS.getItems(macollection, function (data) {
+            lst_items = {};
+            lst_items.time = new Date().getTime();
+            lst_items.data = data;
+            lst_items = JSON.stringify(lst_items);
+            localStorage.setItem('item_' + userName + '_' + macollection + '_' + page, lst_items);
+            fnShowItemsOfCollection(data, page, macollection);
+        }, {
+            start: start,
+            limit: PAGE_SIZE,
+            page: page,
+            columnsort: TRUONG_SAP_XEP,
+            typesort: KIEU_SAP_XEP_TN
+        }, all);
+    }
+    else {
+        var timecheck = 0;
+        if (lst_items.time != null && lst_items.time != undefined)
+            timecheck = checkTimeX(CACHE_TIMER, lst_items.time);
+
+
+        if (timecheck >= 0 || lst_items.data == null) {
+            COLLECTIONS.getItems(macollection, function (data) {
+                lst_items = {};
+                lst_items.time = new Date().getTime();
+                lst_items.data = data;
+                lst_items = JSON.stringify(lst_items);
+                localStorage.setItem('item_' + userName + '_' + macollection + '_' + page, lst_items);
+                fnShowItemsOfCollection(data, page, macollection);
+            }, {
+                start: start,
+                limit: PAGE_SIZE,
+                page: page,
+                columnsort: TRUONG_SAP_XEP,
+                typesort: KIEU_SAP_XEP_TN
+            }, all);
+        }
+        else {
+            var data = lst_items.data;
+            fnShowItemsOfCollection(data, page, macollection);
+        }
+    }
+}
+
+// Hàm hiển thị trình bày danh sách item của một collection
+function fnShowItemsOfCollection(data, page, macollection) {
+    LIST_ITEMS = data.data;
+    var tongsobanghi = data.resultCount;
+    //console.log(page + ' - ' + tongsobanghi);
+    if (parseInt(tongsobanghi) > 0) {
+
+        $("#totalCount1").html(tongsobanghi + " Kết quả được tìm thấy");
+        $("#totalCount2").html(tongsobanghi + " Kết quả được tìm thấy");
+
+        var html = '';
+        var html_grid = "";
+        if (LIST_ITEMS.length > 0) {
+            for (var i = 0; i < LIST_ITEMS.length; i++) {
+                if (i % 3 == 0) {
+                    html += '<div class="row">'
+                }
+
+                html += template_item_grid(LIST_ITEMS[i]);
+
+                if (i % 3 == 2) {
+                    html += '</div>'
+                }
+
+                html_grid += template_item_list(LIST_ITEMS[i]);
+            }
+        }
+
+        $("#div-items-grid").html(html);
+        $("#div-items-list").html(html_grid);
+
+
+        fnPhanTrang2(page, tongsobanghi, 'loadItemCollection', macollection);
+    } else {
+
+        $("#div-items-grid").html(khongcobanghi);
+        $("#div-items-list").html(khongcobanghi);
+
+        $("#totalCount1").html('');
+        $("#idPhanTrang").html('');
+
+        $("#totalCount2").html('');
+        $("#idPhanTrang2").html('');
+
+
+    }
+}
+
+// 

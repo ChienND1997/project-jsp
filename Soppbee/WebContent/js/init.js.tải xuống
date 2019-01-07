@@ -1,0 +1,77 @@
+﻿$(document).ready(function () {
+	//gán logo cho từng tổ chức
+     if (typeof (IMAGE_HEADER) != 'undefined' && IMAGE_HEADER && IMAGE_HEADER != "")
+		$('#idImageHeaderExplorer').css('background','url(' + IMAGE_HEADER + ')');
+		
+	if (typeof (IMAGE_FOOTER) != 'undefined' && IMAGE_FOOTER && IMAGE_FOOTER != "")
+		$('#page-footer').css('background','url(' + IMAGE_FOOTER + ')'); 
+		
+		
+    try {
+        if (CAU_HINH_NANGCAO != "null") {
+            CAU_HINH_NANGCAO = jQuery.parseJSON(CAU_HINH_NANGCAO);
+
+            if (KIEU_SAP_XEP_DM == '0')
+                KIEU_SAP_XEP_DM = "ASC";
+            else
+                KIEU_SAP_XEP_DM = 'ASC';
+
+            if (KIEU_SAP_XEP_TN == '0')
+                KIEU_SAP_XEP_TN = "ASC";
+            else
+                KIEU_SAP_XEP_TN = 'ASC';
+
+            var id = getQuerystring('id');
+
+            if (id != '' && id != null && id != undefined) {
+                MA_COLLECTION = id;
+                fnGetInfoCol(id);
+            }
+
+            fnLoadGiaoDien();
+        }
+    } catch (e) {
+        //alert('Cấu hình không đúng định dạng Json');
+    }
+});
+
+// Lấy thông tin collection cha
+function fnGetInfoCol(macollection) {
+    var url = UrldServiceGeneral + '/space/' + macollection;
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'jsonp',
+        success: function (data) {
+            //console.log(data);
+            if (data != null) {
+                ROOT_COL_NAME = data.Title;
+            }
+            $('#lblCollectionName').html(ROOT_COL_NAME);
+        }
+    });
+}
+
+function fnLoadGiaoDien() {
+    if (DANG_HIEN_THI == 0) {
+        display('grid');
+        loadCollectionList();
+        loadItemCollection(MA_COLLECTION, null, 1);
+        $('#featured-courses').css('display', 'none');
+        $('#giaodien1').css('display', 'block');
+    }
+    else if (DANG_HIEN_THI == 1) {
+        display('list');
+        loadCollectionList();
+        loadItemCollection(MA_COLLECTION, null, 1);
+        $('#featured-courses').css('display', 'none');
+        $('#giaodien1').css('display', 'block');
+    }
+    else if (DANG_HIEN_THI == 2) {
+        $('#giaodien1').css('display', 'none');
+        $('#featured-courses').css('display', 'block');
+        loadCollectionList();
+    }
+
+    
+}
